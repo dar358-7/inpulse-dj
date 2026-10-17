@@ -7,7 +7,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: unzip -q proyecto.zip
+      - name: Elegir el zip mas nuevo (mayor numero vNN)
+        run: |
+          best=""; bestn=-1
+          for z in *.zip; do
+            n=$(unzip -p "$z" '*/DjScreen.kt' 2>/dev/null | grep -o 'APP_BUILD = "v[0-9]*"' | grep -o '[0-9]*' | head -1)
+            [ -z "$n" ] && n=0
+            echo "$z -> v$n"
+            if [ "$n" -gt "$bestn" ]; then bestn=$n; best="$z"; fi
+          done
+          echo "USANDO: $best (v$bestn)"
+          unzip -q "$best"
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -15,7 +25,6 @@ jobs:
       - name: Android SDK
         run: |
           SDKM=$(ls -d $ANDROID_HOME/cmdline-tools/*/bin/sdkmanager | head -1)
-          echo "usando $SDKM"
           yes | $SDKM --licenses > /dev/null || true
           $SDKM "platforms;android-35" "build-tools;35.0.0"
       - uses: gradle/actions/setup-gradle@v4
